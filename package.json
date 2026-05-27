@@ -1,5 +1,5 @@
 {
-  "name": "ytdl-tui",
+  "name": "ytdlp-tui",
   "version": "1.0.0",
   "module": "src/index.ts",
   "bin": {
@@ -20,4 +20,3 @@
     "@opentui/core": "^0.1.101"
   }
 }
-
