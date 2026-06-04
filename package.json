@@ -1,9 +1,9 @@
 {
   "name": "ytdlp-tui",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "module": "src/index.ts",
   "bin": {
-    "ytdl-tui": "./src/index.ts"
+    "ytdlp-tui": "src/index.ts"
   },
   "type": "module",
   "private": false,

@@ -1,3 +1,5 @@
+#!/usr/bin/env bun
+
 import { mkdir } from "node:fs/promises";
 import { download } from "./downloader";
 import { checkYtDlp, getYtvOutputDir, isValidYouTubeUrl } from "./utils";
