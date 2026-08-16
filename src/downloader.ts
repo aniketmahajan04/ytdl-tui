@@ -123,6 +123,21 @@ function extractError(output: string): string {
   return lastError || "Download failed";
 }
 
+/** Prefer HLS (m3u8) — YouTube DASH https streams often return HTTP 403. */
+function videoFormatForQuality(quality: string): string {
+  const qualityMap: Record<string, string> = {
+    best: "best[protocol^=m3u8]/bestvideo*+bestaudio/best",
+    "1080":
+      "best[height<=1080][protocol^=m3u8]/bestvideo[height<=1080]+bestaudio/best[height<=1080]",
+    "720":
+      "best[height<=720][protocol^=m3u8]/bestvideo[height<=720]+bestaudio/best[height<=720]",
+    "480":
+      "best[height<=480][protocol^=m3u8]/bestvideo[height<=480]+bestaudio/best[height<=480]",
+  };
+
+  return qualityMap[quality] ?? qualityMap["best"]!;
+}
+
 function buildArgs(
   url: string,
   mode: DownloadMode,
@@ -131,42 +146,41 @@ function buildArgs(
 ): string[] {
   const output = `${outputDir}/%(title)s.%(ext)s`;
 
+  const common = [
+    "-o",
+    output,
+    "--no-warnings",
+    "--progress",
+    "--retries",
+    "10",
+    "--fragment-retries",
+    "10",
+    "--js-runtimes",
+    "deno",
+  ];
+
   if (mode === "audio") {
     return [
       "-f",
-      "bestaudio/best",
+      // DASH audio often 403s; check formats first, then fall back to HLS and extract.
+      "bestaudio[ext=m4a]/bestaudio[acodec^=mp4a]/best[height<=360][protocol^=m3u8]/bestaudio/best",
       "-x",
       "--audio-format",
       "mp3",
       "--audio-quality",
       "0",
-      "-o",
-      output,
-      "--no-warnings",
-      "--progress",
+      "--check-formats",
+      ...common,
       url,
     ];
   }
 
-  // Build video format string based on quality selection
-  const qualityMap: Record<string, string> = {
-    best: "bestvideo+bestaudio/best",
-    "1080": "bestvideo[height=1080]+bestaudio/best[height<=1080]",
-    "720": "bestvideo[height=720]+bestaudio/best[height<=720]",
-    "480": "bestvideo[height=480]+bestaudio/best[height<=480]",
-  };
-
-  const fmt = qualityMap[quality] ?? qualityMap["best"]!;
-
   return [
     "-f",
-    fmt,
+    videoFormatForQuality(quality),
     "--merge-output-format",
     "mp4",
-    "-o",
-    output,
-    "--no-warnings",
-    "--progress",
+    ...common,
     url,
   ];
 }

@@ -24,11 +24,9 @@ import type {
   DownloadMode,
   DownloadProgress,
   FocusArea,
-  ResolutionOptions,
 } from "./types";
 import { COLORS } from "./colors";
 
-// type FocusSlot = "url" | "modes" | "quality";
 type Phase = "idle" | "downloading" | "done" | "error";
 
 const state = {
@@ -38,11 +36,16 @@ const state = {
 
 const FOCUS_CYCLE: FocusArea[] = ["url", "modes", "quality"];
 
-let selectedModeIndex: number = 0;
-let selectedQualityIndex: number = 0;
-
-const MODE_OPTIONS: DownloadMode[] = ["video", "audio"];
-const QUALITY_OPTIONS: ResolutionOptions[] = ["best", "1080", "720", "480"];
+function getSelectValue(
+  select: SelectRenderable,
+  fallback: string,
+): string {
+  const option = select.getSelectedOption();
+  if (option?.value != null && option.value !== "") {
+    return String(option.value);
+  }
+  return fallback;
+}
 
 let renderer: Awaited<ReturnType<typeof createCliRenderer>>;
 let urlInputRef: InputRenderable;
@@ -111,7 +114,6 @@ export async function initUI(
   });
 
   buildScreen();
-
   return renderer;
 }
 
@@ -246,14 +248,11 @@ function buildScreen(): void {
     showDescription: true,
     onKeyDown: (key) => {
       if (key.name === "up") {
-        selectedModeIndex = Math.max(0, selectedModeIndex - 1);
+        modeSelectRef.moveUp();
       }
 
       if (key.name === "down") {
-        selectedModeIndex = Math.min(
-          MODE_OPTIONS.length - 1,
-          selectedModeIndex + 1,
-        );
+        modeSelectRef.moveDown();
       }
 
       if (key.name === "tab") {
@@ -262,7 +261,7 @@ function buildScreen(): void {
       }
 
       if (key.name === "return" && state.phase === "idle") {
-        if (MODE_OPTIONS[selectedModeIndex] === "audio") {
+        if (getSelectValue(modeSelectRef, "video") === "audio") {
           triggerDownload();
           return;
         }
@@ -313,18 +312,14 @@ function buildScreen(): void {
     showDescription: true,
     onKeyDown: (key) => {
       if (key.name === "up") {
-        selectedQualityIndex = Math.max(0, selectedQualityIndex - 1);
+        qualitySelectRef.moveUp();
       }
 
       if (key.name === "down") {
-        selectedQualityIndex = Math.min(
-          QUALITY_OPTIONS.length - 1,
-          selectedQualityIndex + 1,
-        );
+        qualitySelectRef.moveDown();
       }
       if (key.name === "tab") {
         cycleFocus(key.shift ? -1 : 1);
-
         return;
       }
 
@@ -474,8 +469,8 @@ function triggerDownload(): void {
     return;
   }
 
-  const mode = MODE_OPTIONS[selectedModeIndex] ?? "video";
-  const quality = QUALITY_OPTIONS[selectedQualityIndex] ?? "best";
+  const mode = getSelectValue(modeSelectRef, "video") as DownloadMode;
+  const quality = getSelectValue(qualitySelectRef, "best");
 
   state.phase = "downloading";
 
@@ -494,10 +489,6 @@ function triggerDownload(): void {
 function resetToIdle(): void {
   state.phase = "idle";
 
-  // urlInputRef.value = "";
-
-  // selectedModeIndex = 0;
-  // selectedQualityIndex = 0;
   if (resultLine1) {
     resultLine1.content =
       "  Waiting — paste a URL and press Enter on a quality to download";
